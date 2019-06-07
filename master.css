@@ -1,17 +1,7 @@
-.line1 {
+.line {
     fill: none;
-    stroke: blue;
     stroke-width: 3;
-    z-index: 999;
 }
-
-.line2 {
-    fill: none;
-    stroke: red;
-    stroke-width: 3;
-    z-index: 1000;
-}
-
 .axis {
   stroke-width: 1.5;
   fill: #f4f4f4;
@@ -20,6 +10,7 @@
 }
 
 .area {
-  fill: #ff00ff;
+  fill: url(#linear-gradient);
   stroke: none;
+  opacity: 0.5
 }

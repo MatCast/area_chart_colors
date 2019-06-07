@@ -1,7 +1,52 @@
+function segmentIntersection(arr1, arr2, e) {
+  var b = e - 1;
+  var m1 = (arr1[e] - arr1[b]) / (e - b);
+  var m2 = (arr2[e] - arr2[b]) / (e - b);
+  var q1 = arr1[e] - m1 * e;
+  var q2 = arr2[e] - m2 * e;
+  var x = (q2 - q1) / (m1 - m2);
+  console.log(m1, m2, q1, q2)
+  return x;
+}
+
+function signChange(arr1, arr2) {
+  var diff = [];
+  var sign = [];
+  for (var i = 0; i < arr1.length; i++) {
+    diff.push(arr1[i] - arr2[i]);
+    if (i > 0) {
+      if (diff[i] * diff[i - 1] < 0) {
+        sign.push(i);
+      }
+    }
+  }
+
+  return sign;
+}
+
+function lineIntersection(arr1, arr2) {
+  var sign = signChange(arr1, arr2);
+  var intersections = [];
+  for (var i = 0; i < arr1.length; i++) {
+    if (arr1[i] - arr2[i] == 0.0) {
+      intersections.push(i);
+    }
+  }
+
+  for (i = 0; i < sign.length; i++) {
+    intersections.push(segmentIntersection(arr1, arr2, sign[i]));
+  }
+
+  intersections = intersections.filter(function (d) {return d > 0;});
+
+  return intersections;
+}
+
 function areaChart() {
-  var data1 = [0.0, 1.0, 5.0, 3.0, 7.0, 4.0, 5.0, 8.0];
-  var data2 = [0.0, 3.0, 4.0, 6.0, 9.0, 10.0, 2.0, 6.0];
+  var data1 = [0.0, 3.0, 5.0, 3.0, 7.0, 4.0, 5.0, 8.0];
+  var data2 = [0.0, 1.0, 4.0, 6.0, 9.0, 10.0, 2.0, 6.0];
   var datas = [data1, data2];
+  var c = ['red', 'blue'];
   var maxY = d3.max([d3.max(data1), d3.max(data2)]);
 
   var margin = { top: 50, right: 50, bottom: 50, left: 50 };
@@ -31,7 +76,7 @@ function areaChart() {
   svg.append('g')
       .attr('class', 'axis')
       .attr('transform', 'translate(0,' + height + ')')
-      .call(d3.axisBottom(xScale)); // Create an axis component with d3.axisBottom
+      .call(d3.axisBottom(xScale).ticks(data1.length));
 
   // 4. Call the y axis in a group tag
   svg.append('g')
@@ -65,10 +110,53 @@ function areaChart() {
   .data(datas)
   .enter()
   .append('g')
-  .attr('class', function (d, i) {return 'line' + (i + 1);});
+  .attr('stroke', function (d, i) {return c[i];})
+  .attr('class', 'line');
 
   graph.append('path')
   .attr('d', function (d) {return line(d);}); // 11. Calls the line generator
+
+  var linearGradient = svg.append('defs')
+  .append('linearGradient')
+  .attr('id', 'linear-gradient');
+
+  var intersections = lineIntersection(data1, data2);
+
+  var offScale = d3.scaleLinear()
+  .domain([0, data1.length - 1])
+  .range([0, 100]);
+
+  var lastColor = c[0];
+  var nextColor = c[1];
+  var temp;
+  if (data1[1] < data2[1]) {
+    lastColor = c[1];
+    nextColor = c[0];
+  }
+
+  linearGradient.append('stop')
+  .attr('offset', '0%')
+  .attr('stop-color', lastColor);
+
+  for (i = 0; i < intersections.length; i++) {
+    var offset = offScale(intersections[i]) + '%';
+
+    linearGradient.append('stop')
+    .attr('offset', offset)
+    .attr('stop-color', lastColor);
+
+    linearGradient.append('stop')
+    .attr('offset', offset)
+    .attr('stop-color', nextColor);
+
+    temp = lastColor;
+    lastColor = nextColor;
+    nextColor = temp;
+  }
+
+  linearGradient.append('stop')
+  .attr('offset', '100%')
+  .attr('stop-color', lastColor);
 }
 
 areaChart();
