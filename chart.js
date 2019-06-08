@@ -5,7 +5,6 @@ function segmentIntersection(arr1, arr2, e) {
   var q1 = arr1[e] - m1 * e;
   var q2 = arr2[e] - m2 * e;
   var x = (q2 - q1) / (m1 - m2);
-  console.log(m1, m2, q1, q2)
   return x;
 }
 
@@ -43,15 +42,23 @@ function lineIntersection(arr1, arr2) {
 }
 
 function areaChart() {
-  var data1 = [0.0, 3.0, 5.0, 3.0, 7.0, 4.0, 5.0, 8.0];
-  var data2 = [0.0, 1.0, 4.0, 6.0, 9.0, 10.0, 2.0, 6.0];
+  var nPoints = Math.round(Math.random() * 10 + 10);
+  var data1 = [];
+  var data2 = [];
+  for (var i = 0; i < nPoints; i++) {
+    data1.push(Math.random() * 10);
+    data2.push(Math.random() * 10);
+  }
+
   var datas = [data1, data2];
   var c = ['red', 'blue'];
   var maxY = d3.max([d3.max(data1), d3.max(data2)]);
 
   var margin = { top: 50, right: 50, bottom: 50, left: 50 };
-  var width = window.innerWidth - margin.left - margin.right; // Use the window's width
-  var height = window.innerHeight - margin.top - margin.bottom; // Use the window's height
+  var svgWidth = 800;
+  var svgHeight = 400;
+  var width = svgWidth - margin.left - margin.right;
+  var height = svgHeight - margin.top - margin.bottom;
 
   var xScale = d3.scaleLinear()
   .domain([0, data1.length - 1])
@@ -67,8 +74,9 @@ function areaChart() {
 
   var svg = d3.select('body')
     .append('svg')
-    .attr('width', width + margin.left + margin.right)
-    .attr('height', height + margin.top + margin.bottom)
+    .attr('width', '100%')
+    .attr('preserveAspectRatio', 'xMidYMid meet')
+    .attr('viewBox', '0 0 ' + svgWidth + ' ' + svgHeight)
     .append('g')
     .attr('transform', 'translate(' + margin.left + ',' + margin.top + ')');
 
@@ -85,7 +93,7 @@ function areaChart() {
 
   // reshape data array
   var dataLong = [];
-  for (var i = 0; i < datas[0].length; i++) {
+  for (i = 0; i < datas[0].length; i++) {
     dataLong.push([]);
   }
 
@@ -129,9 +137,14 @@ function areaChart() {
   var lastColor = c[0];
   var nextColor = c[1];
   var temp;
-  if (data1[1] < data2[1]) {
+  if (data1[0] < data2[0]) {
     lastColor = c[1];
     nextColor = c[0];
+  } else if (data1[0] == data2[0]) {
+    if (data1[0] < data2[0]) {
+      lastColor = c[1];
+      nextColor = c[0];
+    }
   }
 
   linearGradient.append('stop')
