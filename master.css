@@ -9,9 +9,8 @@
 
 .axis {
   stroke-width: 1.5;
-  fill: #f4f4f4;
-  font-size: 15px;
-  font-family: Calibri;
+  font-size: 12px;
+  font-family: Verdana;
 }
 
 .area {

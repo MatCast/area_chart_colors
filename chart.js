@@ -1,3 +1,7 @@
+// Find the intesection of each segment:
+// pass the first and second array arr1, arr2
+// and the upper index of the array where the
+// two intersect e
 function segmentIntersection(arr1, arr2, e) {
   var b = e - 1;
   var m1 = (arr1[e] - arr1[b]) / (e - b);
@@ -8,6 +12,8 @@ function segmentIntersection(arr1, arr2, e) {
   return x;
 }
 
+// computes the element-wise array difference
+// and returns the upper indices of the sign changes
 function signChange(arr1, arr2) {
   var diff = [];
   var sign = [];
@@ -23,6 +29,8 @@ function signChange(arr1, arr2) {
   return sign;
 }
 
+// computes all the X coordinates of the
+// intersections of the arrays
 function lineIntersection(arr1, arr2) {
   var sign = signChange(arr1, arr2);
   var intersections = [];
@@ -36,12 +44,18 @@ function lineIntersection(arr1, arr2) {
     intersections.push(segmentIntersection(arr1, arr2, sign[i]));
   }
 
+  // Remove the x = 0 point in case it was one
+  // of the intersection points: this is because
+  // the gradient always starts at 0 and having 0
+  // in the interception would create a redundant
+  // gradeint stop point
   intersections = intersections.filter(function (d) {return d > 0;});
 
   return intersections;
 }
 
 function areaChart() {
+  // generate random arrays
   var nPoints = Math.round(Math.random() * 10 + 10);
   var data1 = [];
   var data2 = [];
@@ -60,18 +74,22 @@ function areaChart() {
   var width = svgWidth - margin.left - margin.right;
   var height = svgHeight - margin.top - margin.bottom;
 
+  // X Scale
   var xScale = d3.scaleLinear()
   .domain([0, data1.length - 1])
   .range([0, width]);
 
+  // Y Scale
   var yScale = d3.scaleLinear()
   .domain([0, maxY])
   .range([height, 0]);
 
+  // Line Generator
   var line = d3.line()
   .x(function (d, i) {return xScale(i); }) // set the x values for the line generator
   .y(function (d) { return yScale(d); }); // set the y values for the line generator
 
+  // SVG dimensions
   var svg = d3.select('body')
     .append('svg')
     .attr('width', '100%')
@@ -80,18 +98,19 @@ function areaChart() {
     .append('g')
     .attr('transform', 'translate(' + margin.left + ',' + margin.top + ')');
 
-  // 3. Call the x axis in a group tag
+  // Call the x axis in a group tag
   svg.append('g')
       .attr('class', 'axis')
       .attr('transform', 'translate(0,' + height + ')')
       .call(d3.axisBottom(xScale).ticks(data1.length));
 
-  // 4. Call the y axis in a group tag
+  // Call the y axis in a group tag
   svg.append('g')
   .attr('class', 'axis')
   .call(d3.axisLeft(yScale));
 
-  // reshape data array
+  // reshape data array from (2, n)
+  // to (n, 2)
   var dataLong = [];
   for (i = 0; i < datas[0].length; i++) {
     dataLong.push([]);
@@ -103,16 +122,19 @@ function areaChart() {
     }
   });
 
+  // Area Generator
   var area = d3.area()
   .x(function (d, i) { return xScale(i);})
   .y1(function (d) { return yScale(d[1]);})
   .y0(function (d) { return yScale(d[0]);});
 
+  // Draw the area using the reshaped array.
   var drawarea = svg.append('path')
   .datum(dataLong)
-  .attr('d', area)
+  .attr('d', area) // Calls the area generator
   .attr('class', 'area');
 
+  // enter the data to the svg
   var graph = svg.append('g')
   .selectAll('graph')
   .data(datas)
@@ -121,19 +143,28 @@ function areaChart() {
   .attr('stroke', function (d, i) {return c[i];})
   .attr('class', 'line');
 
+  // draw the lines
   graph.append('path')
-  .attr('d', function (d) {return line(d);}); // 11. Calls the line generator
+  .attr('d', function (d) {return line(d);}); // Calls the line generator
 
+  // Create a linear Gradient to assign different
+  // colors to the areas based on the highest value
   var linearGradient = svg.append('defs')
   .append('linearGradient')
   .attr('id', 'linear-gradient');
 
+  // Compute the intersections of the arrays
   var intersections = lineIntersection(data1, data2);
 
+  // Transform the intersections values
+  // to percentages to be used as stop points
   var offScale = d3.scaleLinear()
   .domain([0, data1.length - 1])
   .range([0, 100]);
 
+  // Choose which color to start with
+  // based on which curve starts with the
+  // highest value hence is on top off the other.
   var lastColor = c[0];
   var nextColor = c[1];
   var temp;
@@ -147,10 +178,15 @@ function areaChart() {
     }
   }
 
+  // Always start the linear gradient from
+  // the beginning of the chart
   linearGradient.append('stop')
   .attr('offset', '0%')
   .attr('stop-color', lastColor);
 
+  // Insert two stops per intersection,
+  // the first one where the last color stops,
+  // the second one where the next color begins
   for (i = 0; i < intersections.length; i++) {
     var offset = offScale(intersections[i]) + '%';
 
@@ -162,6 +198,7 @@ function areaChart() {
     .attr('offset', offset)
     .attr('stop-color', nextColor);
 
+    // siwtch the color to use next after each interception
     temp = lastColor;
     lastColor = nextColor;
     nextColor = temp;
