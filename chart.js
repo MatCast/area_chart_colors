@@ -54,52 +54,63 @@ function lineIntersection(arr1, arr2) {
   return intersections;
 }
 
-function areaChart(data1, data2) {
-  var datas = [data1, data2];
-  var c = ['red', 'blue'];
-  var maxY = d3.max([d3.max(data1), d3.max(data2)]);
+function barColor(bH, colors) {
+  if (bH > 0) {
+    return colors[0];
+  } else {
+    return colors[1];
+  }
+}
 
-  var margin = { top: 50, right: 50, bottom: 50, left: 50 };
-  var svgWidth = 700;
-  var svgHeight = 350;
-  var width = svgWidth - margin.left - margin.right;
-  var height = svgHeight - margin.top - margin.bottom;
+function drawSvg(data1, data2) {
+  var svgWidth = 1200;
+  var svgHeight = 750;
+  var svg = d3.select('body')
+  .append('svg')
+  .attr('id', 'main-svg')
+  .attr('width', '100%')
+  .attr('preserveAspectRatio', 'xMidYMid meet')
+  .attr('viewBox', '0 0 ' + svgWidth + ' ' + svgHeight);
+
+  var datas = [data1, data2];
+  var c = ['HotPink', 'gold'];
+  var maxY = d3.max([d3.max(data1), d3.max(data2)]);
+  var chartsDiff = 250;
+  var marginLines = { top: 50, right: 50, bottom: chartsDiff, left: 50 };
+  var widthLines = svgWidth - marginLines.left - marginLines.right;
+  var heightLines = svgHeight - marginLines.top - marginLines.bottom;
 
   // X Scale
-  var xScale = d3.scaleLinear()
+  var xScaleLines = d3.scaleLinear()
   .domain([-0.5, data1.length - 0.5])
-  .range([0, width]);
+  .range([0, widthLines]);
 
   // Y Scale
-  var yScale = d3.scaleLinear()
+  var yScaleLines = d3.scaleLinear()
   .domain([0, maxY])
-  .range([height, 0]);
+  .range([heightLines, 0]);
 
   // Line Generator
   var line = d3.line()
-  .x(function (d, i) {return xScale(i); }) // set the x values for the line generator
-  .y(function (d) { return yScale(d); }); // set the y values for the line generator
+  .x(function (d, i) {return xScaleLines(i); }) // set the x values for the line generator
+  .y(function (d) { return yScaleLines(d); }); // set the y values for the line generator
 
   // SVG dimensions
-  var svg = d3.select('#lines')
-    .append('svg')
-    .attr('id', 'svg-lines')
-    .attr('width', '100%')
-    .attr('preserveAspectRatio', 'xMidYMid meet')
-    .attr('viewBox', '0 0 ' + svgWidth + ' ' + svgHeight)
+  var lines = d3.select('#main-svg')
     .append('g')
-    .attr('transform', 'translate(' + margin.left + ',' + margin.top + ')');
+    .attr('id', 'svg-lines')
+    .attr('transform', 'translate(' + marginLines.left + ',' + marginLines.top + ')');
 
   // Call the x axis in a group tag
-  svg.append('g')
+  lines.append('g')
       .attr('class', 'axis')
-      .attr('transform', 'translate(0,' + height + ')')
-      .call(d3.axisBottom(xScale).ticks(data1.length));
+      .attr('transform', 'translate(0,' + heightLines + ')')
+      .call(d3.axisBottom(xScaleLines).ticks(data1.length));
 
   // Call the y axis in a group tag
-  svg.append('g')
+  lines.append('g')
   .attr('class', 'axis')
-  .call(d3.axisLeft(yScale));
+  .call(d3.axisLeft(yScaleLines));
 
   // reshape data array from (2, n)
   // to (n, 2)
@@ -116,18 +127,18 @@ function areaChart(data1, data2) {
 
   // Area Generator
   var area = d3.area()
-  .x(function (d, i) { return xScale(i);})
-  .y1(function (d) { return yScale(d[1]);})
-  .y0(function (d) { return yScale(d[0]);});
+  .x(function (d, i) { return xScaleLines(i);})
+  .y1(function (d) { return yScaleLines(d[1]);})
+  .y0(function (d) { return yScaleLines(d[0]);});
 
   // Draw the area using the reshaped array.
-  var drawarea = svg.append('path')
+  var drawarea = lines.append('path')
   .datum(dataLong)
   .attr('d', area) // Calls the area generator
   .attr('class', 'area');
 
   // enter the data to the svg
-  var graph = svg.append('g')
+  var graph = lines.append('g')
   .selectAll('graph')
   .data(datas)
   .enter()
@@ -199,32 +210,14 @@ function areaChart(data1, data2) {
   linearGradient.append('stop')
   .attr('offset', '100%')
   .attr('stop-color', lastColor);
-}
-
-function barColor(bH, colors) {
-  if (bH > 0) {
-    return colors[0];
-  } else {
-    return colors[1];
-  }
-}
-
-function barChart(data1, data2) {
-  var margin = { top: 50, right: 50, bottom: 50, left: 50 };
-  var svgWidth = 1000;
-  var svgHeight = 150;
-  var width = svgWidth - margin.left - margin.right;
-  var height = svgHeight - margin.top - margin.bottom;
-  var datas = [data1, data2];
-  var c = ['red', 'blue'];
-  var svg = d3.select('#bars')
-  .append('svg')
-  .attr('id', 'svg-bars')
-  .attr('width', '100%')
-  .attr('preserveAspectRatio', 'xMidYMid meet')
-  .attr('viewBox', '0 0 ' + svgWidth + ' ' + svgHeight)
+  var fromTop = svgHeight - chartsDiff + 50;
+  var marginBars = { top: fromTop, right: 50, bottom: 50, left: 50 };
+  var widthBars = svgWidth - marginBars.left - marginBars.right;
+  var heightBars = svgHeight - marginBars.top - marginBars.bottom;
+  var bars = d3.select('svg')
   .append('g')
-  .attr('transform', 'translate(' + margin.left + ',' + margin.top + ')');
+  .attr('id', 'svg-bars')
+  .attr('transform', 'translate(' + marginBars.left + ',' + marginBars.top + ')');
 
   // Get the bars height
   var bHeight = [];
@@ -240,40 +233,40 @@ function barChart(data1, data2) {
   }
 
   // X Scale
-  var xScale = d3.scaleBand()
+  var xScaleBars = d3.scaleBand()
   .domain(bands)
-  .range([0, width])
-  .padding(0.05);
+  .range([0, widthBars])
+  .padding(0);
 
   // Compute the stroke-width
-  var strokeWidth = xScale.padding() * xScale.bandwidth();
+  var strokeWidth = xScaleBars.padding() * xScaleBars.bandwidth();
 
   // Y Scale
-  var yScale = d3.scaleLinear()
+  var yScaleBars = d3.scaleLinear()
   .domain([0, d3.max(bHeightAbs)])
-  .range([height, 0]);
+  .range([heightBars, 0]);
 
   // Call the x axis in a group tag
-  svg.append('g')
+  bars.append('g')
   .attr('class', 'axis')
-  .attr('transform', 'translate(0,' + height + ')')
-  .call(d3.axisBottom(xScale));
+  .attr('transform', 'translate(0,' + heightBars + ')')
+  .call(d3.axisBottom(xScaleBars));
 
   // Call the y axis in a group tag
-  svg.append('g')
+  bars.append('g')
   .attr('class', 'axis')
-  .call(d3.axisLeft(yScale).ticks(3));
+  .call(d3.axisLeft(yScaleBars).ticks(3));
 
   // Draw the bars
-  var bWidth = xScale.bandwidth();
-  svg.selectAll('rect')
+  var bWidth = xScaleBars.bandwidth();
+  bars.selectAll('rect')
   .data(bHeight)
   .enter()
   .append('rect')
-  .attr('width', xScale.bandwidth())
-  .attr('height', function (d) { return height - yScale(Math.abs(d));})
-  .attr('x', function (d, i) { return xScale(i);})
-  .attr('y', function (d) { return yScale(Math.abs(d));})
+  .attr('width', xScaleBars.bandwidth())
+  .attr('height', function (d) { return heightBars - yScaleBars(Math.abs(d));})
+  .attr('x', function (d, i) { return xScaleBars(i);})
+  .attr('y', function (d) { return yScaleBars(Math.abs(d));})
   .attr('class', 'bars')
   .attr('fill', function (d) { return barColor(d, c);})
   .attr('stroke', function (d) { return barColor(d, c);})
@@ -282,7 +275,7 @@ function barChart(data1, data2) {
 
 function main() {
   // generate random arrays
-  var nPoints = Math.round(Math.random() * 10 + 10);
+  var nPoints = Math.round(Math.random() * 25 + 25);
   var data1 = [];
   var data2 = [];
   for (var i = 0; i < nPoints; i++) {
@@ -290,8 +283,7 @@ function main() {
     data2.push(Math.random() * 10);
   }
 
-  areaChart(data1, data2);
-  barChart(data1, data2);
+  drawSvg(data1, data2);
 }
 
 main();
