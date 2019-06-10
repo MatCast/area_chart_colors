@@ -90,8 +90,9 @@ function areaChart() {
   .y(function (d) { return yScale(d); }); // set the y values for the line generator
 
   // SVG dimensions
-  var svg = d3.select('body')
+  var svg = d3.select('#lines')
     .append('svg')
+    .attr('id', 'svg-lines')
     .attr('width', '100%')
     .attr('preserveAspectRatio', 'xMidYMid meet')
     .attr('viewBox', '0 0 ' + svgWidth + ' ' + svgHeight)
