@@ -54,16 +54,7 @@ function lineIntersection(arr1, arr2) {
   return intersections;
 }
 
-function areaChart() {
-  // generate random arrays
-  var nPoints = Math.round(Math.random() * 10 + 10);
-  var data1 = [];
-  var data2 = [];
-  for (var i = 0; i < nPoints; i++) {
-    data1.push(Math.random() * 10);
-    data2.push(Math.random() * 10);
-  }
-
+function areaChart(data1, data2) {
   var datas = [data1, data2];
   var c = ['red', 'blue'];
   var maxY = d3.max([d3.max(data1), d3.max(data2)]);
@@ -210,4 +201,17 @@ function areaChart() {
   .attr('stop-color', lastColor);
 }
 
-areaChart();
+function main() {
+  // generate random arrays
+  var nPoints = Math.round(Math.random() * 10 + 10);
+  var data1 = [];
+  var data2 = [];
+  for (var i = 0; i < nPoints; i++) {
+    data1.push(Math.random() * 10);
+    data2.push(Math.random() * 10);
+  }
+
+  areaChart(data1, data2);
+}
+
+main();
