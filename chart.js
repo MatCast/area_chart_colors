@@ -60,14 +60,14 @@ function areaChart(data1, data2) {
   var maxY = d3.max([d3.max(data1), d3.max(data2)]);
 
   var margin = { top: 50, right: 50, bottom: 50, left: 50 };
-  var svgWidth = 800;
-  var svgHeight = 400;
+  var svgWidth = 700;
+  var svgHeight = 350;
   var width = svgWidth - margin.left - margin.right;
   var height = svgHeight - margin.top - margin.bottom;
 
   // X Scale
   var xScale = d3.scaleLinear()
-  .domain([0, data1.length - 1])
+  .domain([-0.5, data1.length - 0.5])
   .range([0, width]);
 
   // Y Scale
@@ -201,6 +201,85 @@ function areaChart(data1, data2) {
   .attr('stop-color', lastColor);
 }
 
+function barColor(bH, colors) {
+  if (bH > 0) {
+    return colors[0];
+  } else {
+    return colors[1];
+  }
+}
+
+function barChart(data1, data2) {
+  var margin = { top: 50, right: 50, bottom: 50, left: 50 };
+  var svgWidth = 1000;
+  var svgHeight = 150;
+  var width = svgWidth - margin.left - margin.right;
+  var height = svgHeight - margin.top - margin.bottom;
+  var datas = [data1, data2];
+  var c = ['red', 'blue'];
+  var svg = d3.select('#bars')
+  .append('svg')
+  .attr('id', 'svg-bars')
+  .attr('width', '100%')
+  .attr('preserveAspectRatio', 'xMidYMid meet')
+  .attr('viewBox', '0 0 ' + svgWidth + ' ' + svgHeight)
+  .append('g')
+  .attr('transform', 'translate(' + margin.left + ',' + margin.top + ')');
+
+  // Get the bars height
+  var bHeight = [];
+  var bHeightAbs = [];
+  for (var i = 0; i < data1.length; i++) {
+    bHeightAbs.push(Math.abs(data1[i] - data2[i]));
+    bHeight.push(data1[i] - data2[i]);
+  }
+
+  var bands = [];
+  for (i = 0; i < data1.length; i++) {
+    bands.push(i);
+  }
+
+  // X Scale
+  var xScale = d3.scaleBand()
+  .domain(bands)
+  .range([0, width])
+  .padding(0.05);
+
+  // Compute the stroke-width
+  var strokeWidth = xScale.padding() * xScale.bandwidth();
+
+  // Y Scale
+  var yScale = d3.scaleLinear()
+  .domain([0, d3.max(bHeightAbs)])
+  .range([height, 0]);
+
+  // Call the x axis in a group tag
+  svg.append('g')
+  .attr('class', 'axis')
+  .attr('transform', 'translate(0,' + height + ')')
+  .call(d3.axisBottom(xScale));
+
+  // Call the y axis in a group tag
+  svg.append('g')
+  .attr('class', 'axis')
+  .call(d3.axisLeft(yScale).ticks(3));
+
+  // Draw the bars
+  var bWidth = xScale.bandwidth();
+  svg.selectAll('rect')
+  .data(bHeight)
+  .enter()
+  .append('rect')
+  .attr('width', xScale.bandwidth())
+  .attr('height', function (d) { return height - yScale(Math.abs(d));})
+  .attr('x', function (d, i) { return xScale(i);})
+  .attr('y', function (d) { return yScale(Math.abs(d));})
+  .attr('class', 'bars')
+  .attr('fill', function (d) { return barColor(d, c);})
+  .attr('stroke', function (d) { return barColor(d, c);})
+  .attr('stroke-width', strokeWidth);
+}
+
 function main() {
   // generate random arrays
   var nPoints = Math.round(Math.random() * 10 + 10);
@@ -212,6 +291,7 @@ function main() {
   }
 
   areaChart(data1, data2);
+  barChart(data1, data2);
 }
 
 main();
