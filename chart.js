@@ -87,6 +87,8 @@ function svgChart() {
         .x((d, i) => {return this.xScaleLines(i); }) // set the x values for the line generator
         .y((d) => { return this.yScaleLines(d); }); // set the y values for the line generator
 
+      this.clicks = 0;
+
       // enter the data to the svg
       this.names.forEach((val, ix) => {
         lines.append('g')
@@ -95,10 +97,21 @@ function svgChart() {
         .attr('stroke', this.colors[ix]) // function (d, i) {return c[i];})
         .attr('class', `line ${val}`)
         .attr('d', lineGen)
-        .on('click', function(d) {
-          var sel = d3.select(this);
-          console.log(d)
-        console.log(sel.attr('stroke'));
+        .attr('data-legend', d => {return val;})
+        .on('click', (d, i, nodes) => {
+          var col = d3.select(nodes[i]).attr('stroke');
+          if (! this.clicks) {
+            let d2 = arrayFromJson(data, 'average');
+            let c = [col, this.colors[this.colors.length - 1]];
+            this.drawAreas(d, d2, c);
+            this.drawBars(d, d2, c);
+          } else {
+            let d2 = this.lastClicked;
+            let c = [col, this.lastColor];
+            this.drawAreas(d, d2, c);
+            this.drawBars(d, d2, c);
+          }
+
       });
       });
 
@@ -107,9 +120,20 @@ function svgChart() {
 
   this.drawAreas = (data1, data2, c) => {
 
+    this.clicks = 1 //(this.clicks + 1) % 2;
+    this.lastClicked = [];
+    data1.forEach(d => {this.lastClicked.push(d);});
+    this.lastColor = c[0];
+
     // reshape data array from (2, n)
     // to (n, 2)
-    datas = [data1, data2]
+    d3.select('.area')
+    .remove();
+
+    d3.select('defs')
+    .remove();
+
+    datas = [data1, data2];
     var dataLong = [];
     for (i = 0; i < datas[0].length; i++) {
       dataLong.push([]);
@@ -127,6 +151,11 @@ function svgChart() {
     .y1((d) => { return this.yScaleLines(d[1]);})
     .y0((d) => { return this.yScaleLines(d[0]);});
 
+    var lines = d3.select('#main-svg')
+      .append('g')
+      .attr('id', 'svg-lines')
+      .attr('transform', 'translate(' + this.marginLines.left + ',' + this.marginLines.top + ')');
+
     // Draw the area using the reshaped array.
     var drawarea = lines.append('path')
     .datum(dataLong)
@@ -135,12 +164,12 @@ function svgChart() {
 
     // Create a linear Gradient to assign different
     // colors to the areas based on the highest value
-    var linearGradient = svg.append('defs')
+    var linearGradient = this.svg.append('defs')
     .append('linearGradient')
     .attr('id', 'linear-gradient');
 
     // Compute the intersections of the arrays
-    var intersections = lineIntersection(data1, data2);
+    let intersections = lineIntersection(data1, data2);
 
     // Transform the intersections values
     // to percentages to be used as stop points
@@ -207,8 +236,6 @@ function namesAvg(data) {
       }
     }
   avg.push(d3.mean(row));
-  if (Number.isNaN(Math.max(...row))) {
-  console.log(i, row)}
   });
   return avg;
 }
@@ -240,7 +267,7 @@ function segmentIntersection(arr1, arr2, e) {
 function signChange(arr1, arr2) {
   var diff = [];
   var sign = [];
-  for (var i = 0; i < arr1.length; i++) {
+  for (let i = 0; i < arr1.length; i++) {
     diff.push(arr1[i] - arr2[i]);
     if (i > 0) {
       if (diff[i] * diff[i - 1] < 0) {
@@ -256,12 +283,7 @@ function signChange(arr1, arr2) {
 // intersections of the arrays
 function lineIntersection(arr1, arr2) {
   var sign = signChange(arr1, arr2);
-  var intersections = [];
-  for (var i = 0; i < arr1.length; i++) {
-    if (arr1[i] - arr2[i] == 0.0) {
-      intersections.push(i);
-    }
-  }
+  let intersections = [];
 
   for (i = 0; i < sign.length; i++) {
     intersections.push(segmentIntersection(arr1, arr2, sign[i]));
@@ -287,64 +309,71 @@ function barColor(bH, colors) {
   }
 }
 
+this.drawBars = (data1, data2, c) => {
 
-  // var bars = d3.select('svg')
-  // .append('g')
-  // .attr('id', 'svg-bars')
-  // .attr('transform', 'translate(' + this.marginBars.left + ',' + this.marginBars.top + ')');
-  //
-  // // Get the bars height
-  // var bHeight = [];
-  // var bHeightAbs = [];
-  // for (var i = 0; i < data1.length; i++) {
-  //   bHeightAbs.push(Math.abs(data1[i] - data2[i]));
-  //   bHeight.push(data1[i] - data2[i]);
-  // }
-  //
-  // var bands = [];
-  // for (i = 0; i < data1.length; i++) {
-  //   bands.push(i);
-  // }
-  //
-  // // X Scale
-  // var xScaleBars = d3.scaleBand()
-  // .domain(bands)
-  // .range([0, widthBars])
-  // .padding(0);
-  //
-  // // Compute the stroke-width
-  // var strokeWidth = xScaleBars.padding() * xScaleBars.bandwidth();
-  //
-  // // Y Scale
-  // var yScaleBars = d3.scaleLinear()
-  // .domain([0, d3.max(bHeightAbs)])
-  // .range([heightBars, 0]);
-  //
-  // // Call the x axis in a group tag
-  // bars.append('g')
-  // .attr('class', 'axis')
-  // .attr('transform', 'translate(0,' + heightBars + ')')
-  // .call(d3.axisBottom(xScaleBars));
-  //
-  // // Call the y axis in a group tag
-  // bars.append('g')
-  // .attr('class', 'axis')
-  // .call(d3.axisLeft(yScaleBars).ticks(3));
-  //
-  // // Draw the bars
-  // var bWidth = xScaleBars.bandwidth();
-  // bars.selectAll('rect')
-  // .data(bHeight)
-  // .enter()
-  // .append('rect')
-  // .attr('width', xScaleBars.bandwidth())
-  // .attr('height', function (d) { return heightBars - yScaleBars(Math.abs(d));})
-  // .attr('x', function (d, i) { return xScaleBars(i);})
-  // .attr('y', function (d) { return yScaleBars(Math.abs(d));})
-  // .attr('class', 'bars')
-  // .attr('fill', function (d) { return barColor(d, c);})
-  // .attr('stroke', function (d) { return barColor(d, c);})
-  // .attr('stroke-width', strokeWidth);
+  d3.select('#svg-bars')
+  .remove();
+
+  var bars = d3.select('svg')
+  .append('g')
+  .attr('id', 'svg-bars')
+  .attr('transform', 'translate(' + this.marginBars.left + ',' + this.marginBars.top + ')');
+
+  // Get the bars height
+  var bHeight = [];
+  var bHeightAbs = [];
+  for (var i = 0; i < data1.length; i++) {
+    bHeightAbs.push(Math.abs(data1[i] - data2[i]));
+    bHeight.push(data1[i] - data2[i]);
+  }
+
+  var bands = [];
+  for (i = 0; i < data1.length; i++) {
+    bands.push(i);
+  }
+
+  // X Scale
+  var xScaleBars = d3.scaleBand()
+  .domain(bands)
+  .range([0, this.widthBars])
+  .padding(0);
+
+  // Compute the stroke-width
+  var strokeWidth = xScaleBars.padding() * xScaleBars.bandwidth();
+
+  // Y Scale
+  var yScaleBars = d3.scaleLinear()
+  .domain([0, d3.max(bHeightAbs)])
+  .range([this.heightBars, 0]);
+
+  var ticks = xScaleBars.domain()
+  .filter(function(d, i){ return !(i%50); } );
+  // Call the x axis in a group tag
+  bars.append('g')
+  .attr('class', 'axis')
+  .attr('transform', 'translate(0,' + this.heightBars + ')')
+  .call(d3.axisBottom(xScaleBars).tickValues(ticks));
+
+  // Call the y axis in a group tag
+  bars.append('g')
+  .attr('class', 'axis')
+  .call(d3.axisLeft(yScaleBars).ticks(3));
+
+  // Draw the bars
+  var bWidth = xScaleBars.bandwidth();
+  bars.selectAll('rect')
+  .data(bHeight)
+  .enter()
+  .append('rect')
+  .attr('width', xScaleBars.bandwidth())
+  .attr('height', (d) => { return this.heightBars - yScaleBars(Math.abs(d));})
+  .attr('x', function (d, i) { return xScaleBars(i);})
+  .attr('y', function (d) { return yScaleBars(Math.abs(d));})
+  .attr('class', 'bars')
+  .attr('fill', function (d) { return barColor(d, c);})
+  .attr('stroke', function (d) { return barColor(d, c);})
+  .attr('stroke-width', strokeWidth);
+  };
 }
 
 function main() {
