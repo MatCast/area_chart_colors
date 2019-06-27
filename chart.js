@@ -99,17 +99,21 @@ function svgChart() {
         .attr('d', lineGen)
         .attr('data-legend', d => {return val;})
         .on('click', (d, i, nodes) => {
-          var col = d3.select(nodes[i]).attr('stroke');
+          var sel = d3.select(nodes[i]);
+          var col = sel.attr('stroke');
+          var cl = sel.attr('class').split(' ')[1];
+          console.log(cl)
           if (! this.clicks) {
             let d2 = arrayFromJson(data, 'average');
+            this.lastClass = 'average';
             let c = [col, this.colors[this.colors.length - 1]];
-            this.drawAreas(d, d2, c);
-            this.drawBars(d, d2, c);
+            this.drawAreas(d, d2, c, cl);
+            this.drawBars(d, d2, c, cl);
           } else {
             let d2 = this.lastClicked;
             let c = [col, this.lastColor];
-            this.drawAreas(d, d2, c);
-            this.drawBars(d, d2, c);
+            this.drawAreas(d, d2, c, cl);
+            this.drawBars(d, d2, c, cl);
           }
 
       });
@@ -118,9 +122,9 @@ function svgChart() {
     });
 
 
-  this.drawAreas = (data1, data2, c) => {
+  this.drawAreas = (data1, data2, c, cl) => {
 
-    this.clicks = 1 //(this.clicks + 1) % 2;
+    this.clicks = 1;
     this.lastClicked = [];
     data1.forEach(d => {this.lastClicked.push(d);});
     this.lastColor = c[0];
@@ -180,28 +184,21 @@ function svgChart() {
     // Choose which color to start with
     // based on which curve starts with the
     // highest value hence is on top off the other.
+
+    // each of this point represents the NEXT color to show.
+    let highs = whichHigher(data1, data2, intersections, c);
+
+
     var lastColor = c[0];
-    var nextColor = c[1];
-    var temp;
-    if (data1[0] < data2[0]) {
+
+    if (data1[0] - data2[0] != 0) {
+      linearGradient.append('stop')
+      .attr('offset', '0%')
+      .attr('stop-color', lastColor);
+    } else if (data1[0] - data2[0] < 0) {
       lastColor = c[1];
-      nextColor = c[0];
-    } else if (data1[0] == data2[0]) {
-      if (data1[0] < data2[0]) {
-        lastColor = c[1];
-        nextColor = c[0];
-      }
     }
 
-    // Always start the linear gradient from
-    // the beginning of the chart
-    linearGradient.append('stop')
-    .attr('offset', '0%')
-    .attr('stop-color', lastColor);
-
-    // Insert two stops per intersection,
-    // the first one where the last color stops,
-    // the second one where the next color begins
     for (i = 0; i < intersections.length; i++) {
       var offset = offScale(intersections[i]) + '%';
 
@@ -209,14 +206,11 @@ function svgChart() {
       .attr('offset', offset)
       .attr('stop-color', lastColor);
 
+      lastColor = highs[i];
+
       linearGradient.append('stop')
       .attr('offset', offset)
-      .attr('stop-color', nextColor);
-
-      // siwtch the color to use next after each interception
-      temp = lastColor;
-      lastColor = nextColor;
-      nextColor = temp;
+      .attr('stop-color', lastColor);
     }
 
     linearGradient.append('stop')
@@ -224,6 +218,84 @@ function svgChart() {
     .attr('stop-color', lastColor);
 };
 
+
+this.drawBars = (data1, data2, c, cl) => {
+
+  d3.select('#svg-bars')
+  .remove();
+
+  var bars = d3.select('svg')
+  .append('g')
+  .attr('id', 'svg-bars')
+  .attr('transform', 'translate(' + this.marginBars.left + ',' + this.marginBars.top + ')');
+
+  // Get the bars height
+  var bHeight = [];
+  var bHeightAbs = [];
+  for (var i = 0; i < data1.length; i++) {
+    bHeightAbs.push(Math.abs(data1[i] - data2[i]));
+    bHeight.push(data1[i] - data2[i]);
+  }
+
+  var bands = [];
+  for (i = 0; i < data1.length; i++) {
+    bands.push(i);
+  }
+
+  // X Scale
+  var xScaleBars = d3.scaleBand()
+  .domain(bands)
+  .range([0, this.widthBars])
+  .padding(0);
+
+  // Compute the stroke-width
+  var strokeWidth = xScaleBars.padding() * xScaleBars.bandwidth();
+
+  // Y Scale
+  var yScaleBars = d3.scaleLinear()
+  .domain([0, d3.max(bHeightAbs)])
+  .range([this.heightBars, 0]);
+
+  var barsTitle = bars.append('g')
+  .append('text')
+  .attr('x', xScaleBars(2))
+  .attr('y', yScaleBars(d3.max(bHeightAbs)))
+  .text(`${cl} vs. ${this.lastClass}`);
+
+  var ticks = xScaleBars.domain()
+  .filter(function(d, i){ return !(i%50); } );
+  // Call the x axis in a group tag
+  bars.append('g')
+  .attr('class', 'axis')
+  .attr('transform', 'translate(0,' + this.heightBars + ')')
+  .call(d3.axisBottom(xScaleBars).tickValues(ticks));
+
+  // Call the y axis in a group tag
+  bars.append('g')
+  .attr('class', 'axis')
+  .call(d3.axisLeft(yScaleBars).ticks(3));
+
+  // Draw the bars
+  var bWidth = xScaleBars.bandwidth();
+  bars.selectAll('rect')
+  .data(bHeight)
+  .enter()
+  .append('rect')
+  .attr('width', xScaleBars.bandwidth())
+  .attr('height', (d) => { return this.heightBars - yScaleBars(Math.abs(d));})
+  .attr('x', function (d, i) { return xScaleBars(i);})
+  .attr('y', function (d) { return yScaleBars(Math.abs(d));})
+  .attr('class', 'bars')
+  .attr('fill', function (d) { return barColor(d, c);})
+  .attr('stroke', function (d) { return barColor(d, c);})
+  .attr('stroke-width', strokeWidth);
+
+  this.lastClass = cl;
+  };
+
+}
+
+// Get the point mean value along all names
 function namesAvg(data) {
   var avg = [];
   data.forEach((d,i) => {
@@ -240,6 +312,8 @@ function namesAvg(data) {
   return avg;
 }
 
+// Transform the json read from d3.csv to a single array
+// for a specific name
 function arrayFromJson(data, name) {
   var arr = [];
   data.forEach(d => {
@@ -285,18 +359,47 @@ function lineIntersection(arr1, arr2) {
   var sign = signChange(arr1, arr2);
   let intersections = [];
 
-  for (i = 0; i < sign.length; i++) {
+  for (let i = 0; i < sign.length; i++) {
     intersections.push(segmentIntersection(arr1, arr2, sign[i]));
   }
+
+  // add intersection points where the lines meet exactly on one of
+  //  the array elements
+  arr1.forEach((d,i) => {
+    if (arr1[i] - arr2[i] == 0) {
+      intersections.push(i);
+    }
+  });
 
   // Remove the x = 0 point in case it was one
   // of the intersection points: this is because
   // the gradient always starts at 0 and having 0
   // in the interception would create a redundant
   // gradeint stop point
-  intersections = intersections.filter(function (d) {return d > 0;});
-
+  intersections.sort(function(a, b){return a - b;});
   return intersections;
+}
+
+// Returns an array of the same shape as intersections
+// Each value represents the next color to display after
+// the intersection
+function whichHigher(arr1, arr2, intersections, c) {
+  highs = [];
+  intersections.forEach( d => {
+    let i = Math.ceil(d);
+    let diff = arr1[Math.ceil(d)] - arr2[Math.ceil(d)];
+    while (i < arr1.lenght & diff != 0){
+      i += 1;
+      diff = arr1[Math.ceil(i)] - arr2[Math.ceil(i)];
+    }
+    if (diff >= 0) {
+      highs.push(c[0]);
+    } else {
+      highs.push(c[1]);
+    }
+  });
+
+  return highs;
 }
 
 // Returns the bar color based on the first array selected
@@ -309,73 +412,6 @@ function barColor(bH, colors) {
   }
 }
 
-this.drawBars = (data1, data2, c) => {
-
-  d3.select('#svg-bars')
-  .remove();
-
-  var bars = d3.select('svg')
-  .append('g')
-  .attr('id', 'svg-bars')
-  .attr('transform', 'translate(' + this.marginBars.left + ',' + this.marginBars.top + ')');
-
-  // Get the bars height
-  var bHeight = [];
-  var bHeightAbs = [];
-  for (var i = 0; i < data1.length; i++) {
-    bHeightAbs.push(Math.abs(data1[i] - data2[i]));
-    bHeight.push(data1[i] - data2[i]);
-  }
-
-  var bands = [];
-  for (i = 0; i < data1.length; i++) {
-    bands.push(i);
-  }
-
-  // X Scale
-  var xScaleBars = d3.scaleBand()
-  .domain(bands)
-  .range([0, this.widthBars])
-  .padding(0);
-
-  // Compute the stroke-width
-  var strokeWidth = xScaleBars.padding() * xScaleBars.bandwidth();
-
-  // Y Scale
-  var yScaleBars = d3.scaleLinear()
-  .domain([0, d3.max(bHeightAbs)])
-  .range([this.heightBars, 0]);
-
-  var ticks = xScaleBars.domain()
-  .filter(function(d, i){ return !(i%50); } );
-  // Call the x axis in a group tag
-  bars.append('g')
-  .attr('class', 'axis')
-  .attr('transform', 'translate(0,' + this.heightBars + ')')
-  .call(d3.axisBottom(xScaleBars).tickValues(ticks));
-
-  // Call the y axis in a group tag
-  bars.append('g')
-  .attr('class', 'axis')
-  .call(d3.axisLeft(yScaleBars).ticks(3));
-
-  // Draw the bars
-  var bWidth = xScaleBars.bandwidth();
-  bars.selectAll('rect')
-  .data(bHeight)
-  .enter()
-  .append('rect')
-  .attr('width', xScaleBars.bandwidth())
-  .attr('height', (d) => { return this.heightBars - yScaleBars(Math.abs(d));})
-  .attr('x', function (d, i) { return xScaleBars(i);})
-  .attr('y', function (d) { return yScaleBars(Math.abs(d));})
-  .attr('class', 'bars')
-  .attr('fill', function (d) { return barColor(d, c);})
-  .attr('stroke', function (d) { return barColor(d, c);})
-  .attr('stroke-width', strokeWidth);
-  };
-}
-
 function main() {
   // generate random arrays
   // var nPoints = Math.round(Math.random() * 25 + 25);
@@ -386,7 +422,7 @@ function main() {
   //   data2.push(Math.random() * 10);
   // }
   var chart = new svgChart();
-  chart.drawCurves()
+  chart.drawCurves();
 }
 
 main();
