@@ -70,6 +70,11 @@ function svgChart() {
         .append('g')
         .attr('id', 'svg-lines')
         .attr('transform', 'translate(' + this.marginLines.left + ',' + this.marginLines.top + ')');
+      // Bars plot
+      var bars = d3.select('svg')
+        .append('g')
+        .attr('id', 'svg-bars')
+        .attr('transform', 'translate(' + this.marginBars.left + ',' + this.marginBars.top + ')');
 
       // Call the x axis in a group tag
       lines.append('g')
@@ -102,7 +107,7 @@ function svgChart() {
           var sel = d3.select(nodes[i]);
           var col = sel.attr('stroke');
           var cl = sel.attr('class').split(' ')[1];
-          console.log(cl)
+
           if (! this.clicks) {
             let d2 = arrayFromJson(data, 'average');
             this.lastClass = 'average';
@@ -164,7 +169,7 @@ function svgChart() {
     var drawarea = lines.append('path')
     .datum(dataLong)
     .attr('d', area) // Calls the area generator
-    .attr('class', 'area');
+    .attr('class', 'aaa area');
 
     // Create a linear Gradient to assign different
     // colors to the areas based on the highest value
@@ -216,18 +221,24 @@ function svgChart() {
     linearGradient.append('stop')
     .attr('offset', '100%')
     .attr('stop-color', lastColor);
+
+    lines.selectAll('path')
+    .datum((d,i,nodes) => nodes[i].getAttribute('class'))
+    .sort();
 };
 
 
 this.drawBars = (data1, data2, c, cl) => {
 
-  d3.select('#svg-bars')
+var bars = d3.select('#svg-bars');
+
+  bars
+  .selectAll('.axis')
   .remove();
 
-  var bars = d3.select('svg')
-  .append('g')
-  .attr('id', 'svg-bars')
-  .attr('transform', 'translate(' + this.marginBars.left + ',' + this.marginBars.top + ')');
+  bars
+  .selectAll('text')
+  .remove();
 
   // Get the bars height
   var bHeight = [];
@@ -264,6 +275,7 @@ this.drawBars = (data1, data2, c, cl) => {
 
   var ticks = xScaleBars.domain()
   .filter(function(d, i){ return !(i%50); } );
+
   // Call the x axis in a group tag
   bars.append('g')
   .attr('class', 'axis')
@@ -275,20 +287,42 @@ this.drawBars = (data1, data2, c, cl) => {
   .attr('class', 'axis')
   .call(d3.axisLeft(yScaleBars).ticks(3));
 
+  var barsData = bars.selectAll('rect')
+  .data(bHeight);
+
   // Draw the bars
   var bWidth = xScaleBars.bandwidth();
-  bars.selectAll('rect')
-  .data(bHeight)
-  .enter()
-  .append('rect')
-  .attr('width', xScaleBars.bandwidth())
-  .attr('height', (d) => { return this.heightBars - yScaleBars(Math.abs(d));})
-  .attr('x', function (d, i) { return xScaleBars(i);})
-  .attr('y', function (d) { return yScaleBars(Math.abs(d));})
-  .attr('class', 'bars')
-  .attr('fill', function (d) { return barColor(d, c);})
-  .attr('stroke', function (d) { return barColor(d, c);})
-  .attr('stroke-width', strokeWidth);
+  if(barsData.size()>0) {
+    console.log(barsData.size());
+    barsData
+    .enter()
+    .append('rect')
+    .merge(barsData)
+    .attr('x', function (d, i) { return xScaleBars(i);})
+    // .attr('y', (d) => { return this.heightBars - yScaleBars(Math.abs(d));})
+    // .attr('height', 0)
+    .transition()
+    .duration(1000)
+    .attr('y', function (d) { return yScaleBars(Math.abs(d));})
+    .attr('height', (d) => { return this.heightBars - yScaleBars(Math.abs(d));})
+    .attr('fill', function (d) { return barColor(d, c);})
+    .attr('stroke', function (d) { return barColor(d, c);})
+  } else {
+    barsData.enter()
+    .append('rect')
+    .attr('x', function (d, i) { return xScaleBars(i);})
+    .attr('y', yScaleBars(0))
+    .attr('width', xScaleBars.bandwidth())
+    .transition()
+    .duration(1000)
+    .attr('y', function (d) { return yScaleBars(Math.abs(d));})
+    .attr('height', (d) => { return this.heightBars - yScaleBars(Math.abs(d));})
+    .attr('class', 'bars')
+    .attr('fill', function (d) { return barColor(d, c);})
+    .attr('stroke', function (d) { return barColor(d, c);})
+    .attr('stroke-width', strokeWidth);
+  }
+
 
   this.lastClass = cl;
   };
