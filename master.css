@@ -27,6 +27,7 @@ html, body {
 
 .line:hover {
     stroke-width: 7;
+    cursor: pointer;
 }
 
 .axis {
@@ -39,4 +40,17 @@ html, body {
   fill: url(#linear-gradient);
   stroke: none;
   opacity: 0.5;
+}
+
+.legend rect{
+  fill-opacity: 0.8;
+}
+
+.legend:hover rect{
+  fill-opacity: 1;
+}
+
+.legend:hover {
+  font-weight: bold;
+  cursor: pointer;
 }

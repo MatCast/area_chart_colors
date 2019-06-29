@@ -102,11 +102,10 @@ function svgChart() {
         .attr('stroke', this.colors[ix]) // function (d, i) {return c[i];})
         .attr('class', `line ${val}`)
         .attr('d', lineGen)
-        .attr('data-legend', d => {return val;})
         .on('click', (d, i, nodes) => {
-          var sel = d3.select(nodes[i]);
-          var col = sel.attr('stroke');
-          var cl = sel.attr('class').split(' ')[1];
+          let sel = d3.select(nodes[i]);
+          let col = sel.attr('stroke');
+          let cl = sel.attr('class').split(' ')[1];
 
           if (! this.clicks) {
             let d2 = arrayFromJson(data, 'average');
@@ -124,6 +123,53 @@ function svgChart() {
       });
       });
 
+      let legFontSize = 12;
+      let legRectHeight = legFontSize - 1;
+      let legRectWidth = 19;
+      let xOffset = 5;
+
+
+      var legend = lines.append("g")
+       .attr("font-family", "sans-serif")
+       .attr("font-size", legFontSize)
+       .selectAll("g")
+       .data(this.names)
+       .enter()
+       .append("g")
+       .attr("class", d => `legend ${d}`)
+       .attr("transform", function(d, i) { return "translate(0," + i * (legRectHeight + 1) + ")"; });
+
+     legend.append("rect")
+       .attr("x", xOffset)
+       .attr("width", legRectWidth)
+       .attr("height", legRectHeight)
+       .attr("fill", (d, i) => {return this.colors[i];});
+
+     legend.append("text")
+       .attr("x", xOffset + legRectWidth + 5)
+       .attr("y", legRectHeight / 2)
+       .attr("dy", "0.32em")
+       .text(function(d) { return d; });
+
+      legend.on('click', (name, i, nodes) => {
+        let sel = d3.select(nodes[i]);
+        let cl = sel.attr('class').split(' ')[1];
+        let col = d3.select(`.line.${cl}`).attr('stroke');
+        var d = d3.select(`.line.${cl}`).data()[0];
+
+        if (! this.clicks) {
+          let d2 = d3.select(`.line.average`).data()[0];
+          this.lastClass = 'average';
+          let c = [col, this.colors[this.colors.length - 1]];
+          this.drawAreas(d, d2, c, cl);
+          this.drawBars(d, d2, c, cl);
+        } else {
+          let d2 = this.lastClicked;
+          let c = [col, this.lastColor];
+          this.drawAreas(d, d2, c, cl);
+          this.drawBars(d, d2, c, cl);
+        }
+      });
     });
 
 
@@ -192,8 +238,6 @@ function svgChart() {
 
     // each of this point represents the NEXT color to show.
     let highs = whichHigher(data1, data2, intersections, c);
-
-
     var lastColor = c[0];
 
     if (data1[0] - data2[0] != 0) {
@@ -221,10 +265,6 @@ function svgChart() {
     linearGradient.append('stop')
     .attr('offset', '100%')
     .attr('stop-color', lastColor);
-
-    lines.selectAll('path')
-    .datum((d,i,nodes) => nodes[i].getAttribute('class'))
-    .sort();
 };
 
 
@@ -269,7 +309,7 @@ var bars = d3.select('#svg-bars');
 
   var barsTitle = bars.append('g')
   .append('text')
-  .attr('x', xScaleBars(2))
+  .attr('x', 5)
   .attr('y', yScaleBars(d3.max(bHeightAbs)))
   .text(`${cl} vs. ${this.lastClass}`);
 
@@ -293,7 +333,6 @@ var bars = d3.select('#svg-bars');
   // Draw the bars
   var bWidth = xScaleBars.bandwidth();
   if(barsData.size()>0) {
-    console.log(barsData.size());
     barsData
     .enter()
     .append('rect')
@@ -306,7 +345,7 @@ var bars = d3.select('#svg-bars');
     .attr('y', function (d) { return yScaleBars(Math.abs(d));})
     .attr('height', (d) => { return this.heightBars - yScaleBars(Math.abs(d));})
     .attr('fill', function (d) { return barColor(d, c);})
-    .attr('stroke', function (d) { return barColor(d, c);})
+    .attr('stroke', function (d) { return barColor(d, c);});
   } else {
     barsData.enter()
     .append('rect')
@@ -421,14 +460,14 @@ function whichHigher(arr1, arr2, intersections, c) {
   highs = [];
   intersections.forEach( d => {
     let i = Math.ceil(d);
-    let diff = arr1[Math.ceil(d)] - arr2[Math.ceil(d)];
-    while (i < arr1.lenght & diff != 0){
+    let diff = arr1[i] - arr2[i];
+    while ((i < arr1.length) & (diff == 0)){
       i += 1;
-      diff = arr1[Math.ceil(i)] - arr2[Math.ceil(i)];
+      diff = arr1[i] - arr2[i];
     }
     if (diff >= 0) {
       highs.push(c[0]);
-    } else {
+    } else if (diff < 0) {
       highs.push(c[1]);
     }
   });
@@ -447,14 +486,6 @@ function barColor(bH, colors) {
 }
 
 function main() {
-  // generate random arrays
-  // var nPoints = Math.round(Math.random() * 25 + 25);
-  // var data1 = [];
-  // var data2 = [];
-  // for (var i = 0; i < nPoints; i++) {
-  //   data1.push(Math.random() * 10);
-  //   data2.push(Math.random() * 10);
-  // }
   var chart = new svgChart();
   chart.drawCurves();
 }
