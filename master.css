@@ -3,14 +3,76 @@
   padding: 0;
   font-family: monospace;
 }
-
-html, body {
-  height: 100vh;
+.box {
+  height: 500px;
+  width: 100%;
+  border: 2px solid HotPink;
 }
 
-#main-svg, #svg-lines, #svg-bars {
-  max-height: 100%;
+#lines {
+  max-height: 100vh;
+  position: relative;
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
+
+#main-svg {
+  max-height: 100vh;
+}
+
+.button-wrapper.hidden {
+  display: none;
+}
+
+.button-wrapper {
+    position: absolute;
+    width: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transform: translateY(200%);
+    -webkit-transform: translateY(200%);
+}
+
+a.howto {
+  background-color: HotPink;
+  padding: 10px;
+  border-radius: 5px;
+  border: 4px solid #ffffff00;
+  text-decoration: none;
+  font-size: 35px;
+  color: white;
+}
+
+a.howto:hover {
+  background: white;
+  color: HotPink;
+  border: 4px solid HotPink;
+  font-weight: 700;
+}
+
+.button {
+  display: block;
+  align-items: center;
+  justify-content: center;
+}
+
+.arrow {
+  border: solid white;
+  border-width: 0 5px 5px 0;
+  padding: 5px;
+  height: 5px;
+  width: 5px;
+  margin: auto;
+  transform: rotate(45deg);
+  -webkit-transform: rotate(45deg);
+}
+.arrow:hover {
+  border-color: HotPink;
+}
+
 
 .bars {
   fill-opacity: 0.7;
@@ -22,7 +84,7 @@ html, body {
 
 .line {
     fill: none;
-    stroke-width: 3;
+    stroke-width: 4;
 }
 
 .line:hover {
@@ -39,7 +101,7 @@ html, body {
 .area {
   fill: url(#linear-gradient);
   stroke: none;
-  opacity: 0.5;
+  /* opacity: 0.5; */
 }
 
 .legend rect{
@@ -53,4 +115,55 @@ html, body {
 .legend:hover {
   font-weight: bold;
   cursor: pointer;
+}
+
+.tooltip {
+  position: absolute;
+  z-index: 1000;
+  background-color: #f4f4f4CC;
+  font-size: 14px;
+}
+
+.hidden {
+  display: none;
+}
+
+
+.tooltip th {
+  font-weight: bold;
+  text-align: left;
+}
+
+.chart-title {
+  font-weight: bold;
+}
+
+.axis-label {
+  text-anchor: middle;
+  font-size: 12px;
+}
+
+.tooltip .x, .tooltip .y {
+  text-align: right;
+}
+
+h2 {
+  color: HotPink;
+  font-size: 35px;
+  text-align: center;
+  padding: 3px;
+}
+
+p, ul {
+  font-size: 16px;
+  padding: 3px;
+  list-style-position: inside;
+}
+
+#readme {
+  padding-bottom: 35px;
+  text-align: justify;
+  max-width: 800px;
+  display: block;
+  margin: auto;
 }

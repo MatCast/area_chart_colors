@@ -1,33 +1,33 @@
 // SVG properties
 function svgChart() {
   this.svgWidth = 1200;
-  this.svgHeight = 750;
+  this.svgHeight = 700;
   // Height of the bottom chart: bottom margin of the top chart
   this.chartsDiff = 250;
   //  Top chart margins and inner measures
-  this.marginLines = { top: 50, right: 50, bottom: this.chartsDiff, left: 50 };
+  this.marginLines = { top: 50, right: 80, bottom: this.chartsDiff, left: 80 };
   this.widthLines = this.svgWidth - this.marginLines.left - this.marginLines.right;
   this.heightLines = this.svgHeight - this.marginLines.top - this.marginLines.bottom;
 
   // Bottom chart margins and inner measures
   this.fromTop = this.svgHeight - this.chartsDiff + 50;
-  this.marginBars = { top: this.fromTop, right: 50, bottom: 50, left: 50 };
+  this.marginBars = { top: this.fromTop, right: this.marginLines.right, bottom: 50, left: this.marginLines.left };
   this.widthBars = this.svgWidth - this.marginBars.left - this.marginBars.right;
   this.heightBars = this.svgHeight - this.marginBars.top - this.marginBars.bottom;
 
 
   // Dimensions and aspect ratio of the SVG
-  this.svg = d3.select('body')
+  this.svg = d3.select('#lines')
   .append('svg')
   .attr('id', 'main-svg')
   .attr('width', '100%')
   .attr('preserveAspectRatio', 'xMidYMid meet')
-  .attr('viewBox', '0 0 ' + this.svgWidth + ' ' + this.svgHeight),
+  .attr('viewBox', '0 0 ' + this.svgWidth + ' ' + this.svgHeight);
 
   this.drawCurves = () =>
     d3.csv('./distances.csv').then((data) => {
       this.names = [];
-      this.colors = ['HotPink', 'gold', 'DodgerBlue', 'BlueViolet'];
+      this.colors = ['HotPink', 'Orange', 'DodgerBlue', 'BlueViolet'];
       data.forEach((d) => {
         for (var key in d) {
           if (d.hasOwnProperty(key)) {
@@ -39,8 +39,6 @@ function svgChart() {
         }
       });
 
-      // var datas = [data1, data2];
-      // var c = ['HotPink', 'gold'];
       var maxPerName = [];
       this.names.forEach(function (name) {
         maxPerName.push(d3.max(data, function(d){
@@ -63,24 +61,31 @@ function svgChart() {
         data[i].average = d;
       });
       this.names.push('average');
-      this.colors.push('orange');
+      this.colors.push('OrangeRed');
 
       // Curves Group and translation
-      var lines = d3.select('#main-svg')
+      let lines = d3.select('#main-svg')
         .append('g')
         .attr('id', 'svg-lines')
         .attr('transform', 'translate(' + this.marginLines.left + ',' + this.marginLines.top + ')');
       // Bars plot
-      var bars = d3.select('svg')
+      let bars = d3.select('#main-svg')
         .append('g')
         .attr('id', 'svg-bars')
         .attr('transform', 'translate(' + this.marginBars.left + ',' + this.marginBars.top + ')');
+
+      this.xTicksOffset = (data[1].distance - data[0].distance) / 2000.0;
+
+      // X Scale
+      this.xScaleTicks = d3.scaleLinear()
+      .domain([- this.xTicksOffset, d3.max(data, d => d.distance) / 1000 - this.xTicksOffset])
+      .range([0, this.widthLines]);
 
       // Call the x axis in a group tag
       lines.append('g')
           .attr('class', 'axis')
           .attr('transform', 'translate(0,' + this.heightLines + ')')
-          .call(d3.axisBottom(this.xScaleLines));
+          .call(d3.axisBottom(this.xScaleTicks));
 
       // Call the y axis in a group tag
       lines.append('g')
@@ -119,37 +124,84 @@ function svgChart() {
             this.drawAreas(d, d2, c, cl);
             this.drawBars(d, d2, c, cl);
           }
-
+        })
+      .on('mouseover', (d, i, node) => this.overTooltip(node[i]))
+      .on('mouseout', () => this.outTooltip())
+      .on('mousemove', (d, i, node) => this.tooltipUpdate(node[i]));
       });
-      });
 
+
+    // toolTip
+
+     this.overTooltip = (node) => {
+       let sel = d3.select(node);
+       let x = this.xScaleLines.invert(d3.mouse(node)[0]) * this.xTicksOffset * 2.0;
+       let y = this.yScaleLines.invert(d3.mouse(node)[1]);
+       let name = sel.attr('class').split(' ')[1];
+       this.fillTooltip(sel, name, x, y);
+       d3.selectAll('.tooltip')
+        .classed('hidden', false)
+        .style('left', (d3.event.pageX - 100) + 'px')
+        .style('top', (d3.event.pageY - 60) + 'px');
+     };
+
+     this.outTooltip = () => {
+       d3.selectAll('.tooltip')
+        .classed('hidden', true);
+     };
+
+     this.tooltipUpdate = (node) => {
+       let sel = d3.select(node);
+       let x = this.xScaleLines.invert(d3.mouse(node)[0]) * this.xTicksOffset * 2.0;
+       let y = this.yScaleLines.invert(d3.mouse(node)[1]);
+       let name = sel.attr('class').split(' ')[1];
+       this.fillTooltip(sel, name, x, y);
+       d3.selectAll('.tooltip')
+       .style('left', (d3.event.pageX - 100) + 'px')
+       .style('top', (d3.event.pageY - 60) + 'px');
+     };
+
+    this.fillTooltip = (sel, name, x, y) => {
+      let tb = d3.selectAll('.tooltip').select('table');
+      tb.select('th')
+      .text(capitFirst(name))
+      .style('color', sel.attr('stroke'));
+
+      tb.select('.x')
+      .text(x.toFixed(1) + 'km');
+
+      tb.select('.y')
+      .text(y.toFixed(0) + 'm');
+    };
+
+      // Legend
       let legFontSize = 12;
       let legRectHeight = legFontSize - 1;
       let legRectWidth = 19;
       let xOffset = 5;
 
 
-      var legend = lines.append("g")
-       .attr("font-family", "sans-serif")
-       .attr("font-size", legFontSize)
-       .selectAll("g")
+      var legend = lines.append('g')
+       .attr('font-family', 'sans-serif')
+       .attr('font-size', legFontSize)
+       .selectAll('g')
        .data(this.names)
        .enter()
-       .append("g")
-       .attr("class", d => `legend ${d}`)
-       .attr("transform", function(d, i) { return "translate(0," + i * (legRectHeight + 1) + ")"; });
+       .append('g')
+       .attr('class', d => `legend ${d}`)
+       .attr('transform', function(d, i) { return 'translate(0,' + i * (legRectHeight + 1) + ')'; });
 
-     legend.append("rect")
-       .attr("x", xOffset)
-       .attr("width", legRectWidth)
-       .attr("height", legRectHeight)
-       .attr("fill", (d, i) => {return this.colors[i];});
+     legend.append('rect')
+       .attr('x', xOffset)
+       .attr('width', legRectWidth)
+       .attr('height', legRectHeight)
+       .attr('fill', (d, i) => {return this.colors[i];});
 
-     legend.append("text")
-       .attr("x", xOffset + legRectWidth + 5)
-       .attr("y", legRectHeight / 2)
-       .attr("dy", "0.32em")
-       .text(function(d) { return d; });
+     legend.append('text')
+       .attr('x', xOffset + legRectWidth + 5)
+       .attr('y', legRectHeight / 2)
+       .attr('dy', '0.32em')
+       .text(function(d) { return capitFirst(d); });
 
       legend.on('click', (name, i, nodes) => {
         let sel = d3.select(nodes[i]);
@@ -170,6 +222,29 @@ function svgChart() {
           this.drawBars(d, d2, c, cl);
         }
       });
+
+      //  Axis Labels
+      let xLabel = lines.append('text')
+      .attr('class', 'x axis-label')
+      .text('Distance [km]')
+      .attr('x', this.widthBars / 2.0)
+      .attr('y', this.heightLines + 40);
+
+      let labTop = d3.select('.x.axis-label')
+      .node()
+      .getBoundingClientRect()
+      .top;
+
+      d3.select('.howto')
+      .on('click', function() {this.classList.add('hidden');});
+
+      //  Axis Labels
+      let yLabelLines = lines.append('text')
+      .attr('class', 'y axis-label')
+      .text('Altitude differece [m]')
+      .attr('y', - 50)
+      .attr('x', - this.heightLines / 2.0)
+      .attr('transform', 'rotate(270)');
     });
 
 
@@ -183,9 +258,14 @@ function svgChart() {
     // reshape data array from (2, n)
     // to (n, 2)
     d3.select('.area')
+    .transition()
+    .duration(1000)
+    .attr('opacity', 0)
     .remove();
 
     d3.select('defs')
+    .transition()
+    .delay(500)
     .remove();
 
     datas = [data1, data2];
@@ -208,14 +288,18 @@ function svgChart() {
 
     var lines = d3.select('#main-svg')
       .append('g')
-      .attr('id', 'svg-lines')
       .attr('transform', 'translate(' + this.marginLines.left + ',' + this.marginLines.top + ')');
 
     // Draw the area using the reshaped array.
     var drawarea = lines.append('path')
     .datum(dataLong)
     .attr('d', area) // Calls the area generator
-    .attr('class', 'aaa area');
+    .attr('class', 'area')
+    .attr('opacity', 0)
+    .transition()
+    .delay(500)
+    .duration(500)
+    .attr('opacity', 0.5);
 
     // Create a linear Gradient to assign different
     // colors to the areas based on the highest value
@@ -240,35 +324,40 @@ function svgChart() {
     let highs = whichHigher(data1, data2, intersections, c);
     var lastColor = c[0];
 
-    if (data1[0] - data2[0] != 0) {
-      linearGradient.append('stop')
-      .attr('offset', '0%')
-      .attr('stop-color', lastColor);
-    } else if (data1[0] - data2[0] < 0) {
-      lastColor = c[1];
-    }
+    setTimeout(() => {
+      if (data1[0] - data2[0] != 0) {
+          linearGradient.append('stop')
+          .attr('offset', '0%')
+          .attr('stop-color', lastColor);
+        } else if (data1[0] - data2[0] < 0) {
+          lastColor = c[1];
+        }
 
-    for (i = 0; i < intersections.length; i++) {
-      var offset = offScale(intersections[i]) + '%';
+        for (i = 0; i < intersections.length; i++) {
+          var offset = offScale(intersections[i]) + '%';
 
-      linearGradient.append('stop')
-      .attr('offset', offset)
-      .attr('stop-color', lastColor);
+          linearGradient.append('stop')
+          .attr('offset', offset)
+          .attr('stop-color', lastColor);
 
-      lastColor = highs[i];
+          lastColor = highs[i];
 
-      linearGradient.append('stop')
-      .attr('offset', offset)
-      .attr('stop-color', lastColor);
-    }
+          linearGradient.append('stop')
+          .attr('offset', offset)
+          .attr('stop-color', lastColor);
+        }
 
-    linearGradient.append('stop')
-    .attr('offset', '100%')
-    .attr('stop-color', lastColor);
+        linearGradient.append('stop')
+        .attr('offset', '100%')
+        .attr('stop-color', lastColor);}, 500);
+
 };
 
 
 this.drawBars = (data1, data2, c, cl) => {
+
+d3.select('.button-wrapper')
+.classed('hidden', true);
 
 var bars = d3.select('#svg-bars');
 
@@ -276,8 +365,10 @@ var bars = d3.select('#svg-bars');
   .selectAll('.axis')
   .remove();
 
-  bars
-  .selectAll('text')
+  d3.selectAll('.chart-title')
+  .transition()
+  .duration(1000)
+  .style('opacity', 0)
   .remove();
 
   // Get the bars height
@@ -308,19 +399,35 @@ var bars = d3.select('#svg-bars');
   .range([this.heightBars, 0]);
 
   var barsTitle = bars.append('g')
+  .attr('class', 'chart-title')
   .append('text')
   .attr('x', 5)
   .attr('y', yScaleBars(d3.max(bHeightAbs)))
-  .text(`${cl} vs. ${this.lastClass}`);
+  .text(`${capitFirst(cl)} vs. ${capitFirst(this.lastClass)}`)
+  .style('opacity', 0)
+  .transition()
+  .duration(1000)
+  .style('opacity', 1);
 
-  var ticks = xScaleBars.domain()
+  let ticksBands = [];
+
+  for (i = 0; i < data1.length; i++) {
+    ticksBands.push(i * this.xTicksOffset * 2.0);
+  }
+
+  let xScaleBarsTicks = d3.scaleBand()
+  .domain(ticksBands)
+  .range([0, this.widthBars])
+  .padding(0);
+
+  var ticks = xScaleBarsTicks.domain()
   .filter(function(d, i){ return !(i%50); } );
 
   // Call the x axis in a group tag
   bars.append('g')
   .attr('class', 'axis')
   .attr('transform', 'translate(0,' + this.heightBars + ')')
-  .call(d3.axisBottom(xScaleBars).tickValues(ticks));
+  .call(d3.axisBottom(xScaleBarsTicks).tickValues(ticks));
 
   // Call the y axis in a group tag
   bars.append('g')
@@ -362,10 +469,26 @@ var bars = d3.select('#svg-bars');
     .attr('stroke-width', strokeWidth);
   }
 
-
   this.lastClass = cl;
+
+  //  Axis Labels
+  let yLabelBars = bars.append('text')
+  .attr('class', 'y axis-label')
+  .text('Altitude differece [m]')
+  .attr('y', - 50)
+  .attr('x', - this.heightBars / 2.0)
+  .attr('transform', 'rotate(270)');
+
+  let xLabel = d3.select('.x.axis-label').remove();
+
+  bars.append(function() {return xLabel.node()})
+  .attr('y', this.heightBars + 40);
   };
 
+}
+
+function capitFirst(name) {
+  return name.charAt(0).toUpperCase() + name.slice(1);
 }
 
 // Get the point mean value along all names
@@ -488,6 +611,15 @@ function barColor(bH, colors) {
 function main() {
   var chart = new svgChart();
   chart.drawCurves();
+  document.querySelectorAll('a[href^="#"]').forEach(anchor => {
+    anchor.addEventListener('click', function (e) {
+        e.preventDefault();
+
+        document.querySelector(this.getAttribute('href')).scrollIntoView({
+            behavior: 'smooth'
+          });
+      });
+  });
 }
 
 main();

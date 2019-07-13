@@ -7,8 +7,44 @@
     <title>Line Area</title>
   </head>
   <body>
-    <div id="lines"></div>
-    <div id="bars"></div>
+    <div id="lines">
+      <div class="button-wrapper">
+        <a href="#readme" class="howto">
+              HOW TO
+          </a>
+      </div>
+    </div>
+    <div class="tooltip hidden">
+      <table>
+        <tr>
+          <th></th>
+          <th></th>
+        </tr>
+        <tr>
+          <td>Distance:</td>
+          <td class="x"></td>
+        </tr>
+        <tr>
+          <td>Altitude:</td>
+          <td class="y"></td>
+        </tr>
+      </table>
+    </div>
+    <div id="readme">
+      <h2>HOW TO</h2>
+      <p>This plot shows the maximum altitude around some university in an alpine enviroment.</p>
+      <p>The value shown on the y axis is the altitude difference between the university and the highest ground
+        around the university at the given distances</p>
+      <ul>
+        <li>Click on any line or any legend item to display the altitude difference between the clicked
+        university and the average altitude at each give distance.</li>
+        <li>Click again on a different university to display the altitude difference between that university and
+        the last clicked one</li>
+      </ul>
+    </div>
+    <div class="box">
+
+    </div>
   </body>
   <script src="chart.js" charset="utf-8"></script>
 </html>
